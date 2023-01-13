@@ -1,7 +1,15 @@
 
+# add a random rotation to this function to make it better randomized
 
-generate_random_matrix <- function(area, grid_size = 10)
+# could also make a function to generate a random area (from parameter matrix)
+
+generate_random_matrix <- function(area = 0, grid_size = 6)
 {
+  if (area == 0) {
+    area_bounds <- ((grid_size^2)/4):((grid_size^2)/2)
+    area <- sample(area_bounds, 1)
+  }
+
   passed <- FALSE
 
   while (!passed) {
@@ -16,5 +24,5 @@ generate_random_matrix <- function(area, grid_size = 10)
   }
 
 
-  return(random_matrix)
+  return(randomize_orientation(random_matrix))
 }

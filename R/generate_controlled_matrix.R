@@ -1,4 +1,5 @@
-# type = addition or subtraction (maybe change name)
+
+# needs to be rewritten to match upcoming changes to change N boxes
 generate_controlled_matrix <- function(changes,
                                        width = 6, height = 6, grid_size = 10,
                                        sides = c(),
@@ -7,36 +8,38 @@ generate_controlled_matrix <- function(changes,
                                        operation = "both")
 {
 
-  shape <- generate_matrix(width, height, grid_size)
+  # shape <- generate_matrix(width, height, grid_size)
+  #
+  # # if number of sides to change unspecified, randomly determine how many
+  # all_sides <- c("left", "right", "top", "bottom")
+  # if (length(sides) == 0) {
+  #   number_of_sides <- sample(1:4, 1)
+  #   sides <- sample(all_sides, number_of_sides, replace = FALSE)
+  # }
+  #
+  # # matrix <- data.frame(matrix(nrow = grid_size, ncol = grid_size))
+  # # padding <- determine_padding(width, height, grid_size,
+  # #                              v_offset, h_offset)
+  #
+  #
+  #
+  # # changes = number of additions/subtractions to the baseline
+  #
+  # # baseline could be rectangle tall or long, too
+  #   # so then prefer to have an m argument too?
+  #
+  #
+  # # 1 if size of b not equal to gridsize, error
+  #
+  #
+  #
+  #
+  #
+  #
+  #
+  # return(change_n_boxes(shape, changes, operation, sides))
 
-  # if number of sides to change unspecified, randomly determine how many
-  all_sides <- c("left", "right", "top", "bottom")
-  if (length(sides) == 0) {
-    number_of_sides <- sample(1:4, 1)
-    sides <- sample(all_sides, number_of_sides, replace = FALSE)
-  }
-
-  # matrix <- data.frame(matrix(nrow = grid_size, ncol = grid_size))
-  # padding <- determine_padding(width, height, grid_size,
-  #                              v_offset, h_offset)
-
-
-
-  # changes = number of additions/subtractions to the baseline
-
-  # baseline could be rectangle tall or long, too
-    # so then prefer to have an m argument too?
-
-
-  # 1 if size of b not equal to gridsize, error
-
-
-
-
-
-
-
-  return(change_n_boxes(shape, changes, sides, operation))
+  return()
 }
 
 

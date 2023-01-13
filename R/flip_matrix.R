@@ -1,5 +1,5 @@
 
-flip_matrix <- function(matrix, direction)
+flip_matrix <- function(matrix, direction = "horizontal")
 {
   if (direction == "horizontal") {
     new_cols <- rev(colnames(matrix))

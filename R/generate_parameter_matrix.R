@@ -1,14 +1,8 @@
 # GOAL: based on exact specifications, produce a possible result
   # if unspecified, allow to vary
 
-# FIX:
-  # limit size more, it can hang (or figure out why hanging in change N boxes)
 
-# BUG:
 
-# from find eligible vecs; this makes generation hang
-# Error in if (side == "left" & current_vec[1] == 1) { :
-#     argument is of length zero
 
 # Error in as.vector(x, mode) :
 # cannot coerce type 'closure' to vector of type 'any'
@@ -17,29 +11,39 @@
 # change N boxes takes a very long time
   # limit changes more or something?
 
+
+############
+# rewrite
+############
+# BUG: when n sides = 1 and area diff is large, can hang infinitely
+
+# 1. if area = 14, randomly pick a square or rectangle of similar area
+
+# s = floor(sqrt(area))
+# c(s-1, s, s+1, s+2) [use range parameter for bigger differences? probably enough]
+# pick two randomly, make a rectangle (or square) of that size
+# change N boxes from that to match area
+
+  # so, a 3x4=12 or 4x3=12 or 4x4=16 or 3x3=9
+  # make N changes to that baseline so that the area matches
+  # so pick the 3 closest products above and below and randomly select 1
+  # make N changes so that area matches
+# 2. if perimeter = 0, passes automatically, otherwise, re-run until match
+# 3. if complexity = 0, passes automatically, otherwise, re-run until match
+  # 4. same for corners
+
 generate_parameter_matrix <- function(area = 0, perimeter = 0,
-                                      complexity = 0, complexity_fits = 0,
-                                      grid_size = 10,
-                                      sides = c(),
+                                      complexity = 0, corners = 0,
+                                      grid_size = 6, max_difference = 10,
                                       iterations = 1000)
 {
-  # ADD
-    # method to specify the baseline starting shape and max changes
-    # like I want all 6x4 grids with few changes
 
   # limit grid sizes for now
   if (grid_size > 20) {
     return(print("PERIMETER: grid sizes larger than 20 not yet supported"))
   }
 
-  # if number of sides to change unspecified, randomly determine how many
-  all_sides <- c("left", "right", "top", "bottom")
-  if (length(sides) == 0) {
-    number_of_sides <- sample(1:4, 1)
-    sides <- sample(all_sides, number_of_sides, replace = FALSE)
-  }
-
-  # randomly select area if unspecified
+  # randomly select parameters if each unspecified (could make function)
   if (area == 0) {
     area_bounds <- ((grid_size^2)/4):((grid_size^2)/2)
     area <- sample(area_bounds, 1)
@@ -60,60 +64,201 @@ generate_parameter_matrix <- function(area = 0, perimeter = 0,
     random_complexity <- FALSE
   }
 
-  if (complexity_fits == 0) {
-    random_complexity_fits <- TRUE
+  if (corners == 0) {
+    random_corners <- TRUE
   } else {
-    random_complexity_fits <- FALSE
+    random_corners <- FALSE
   }
 
-  # start with a square
-
   finished <- FALSE
-  # LOOP until we match: area, perimeter, complexity
-  #iterations <- 100
-
-
   while (!finished & (iterations > 0)) {
 
     # potential parameters
     area_passed <- FALSE
     perimeter_passed <- FALSE
     complexity_passed <- FALSE
-    complexity_fits_passed <- FALSE
+    corners_passed <- FALSE
 
-    # 1 make N changes to the baseline
-    number_of_changes <- sample(1:(floor((grid_size^2)*0.2)), 1)
+    # randomly select baseline size
+    s = floor(sqrt(area))
+    product_range <- c(s-1, s, s+1, s+2)
 
-    # re-randomize sides
-    number_of_sides <- sample(1:4, 1)
-    sides <- sample(all_sides, number_of_sides, replace = FALSE)
-
-    # BUG HERE, want it to only sample sometimes
-    if (random_area == TRUE) {
-      area <- sample(area_bounds, 1)
+    # generate a baseline rect with a random difference from the area
+    area_diff <- max_difference + 1
+    while (abs(area_diff) > max_difference) {
+      p1 <- sample(product_range, 1)
+      p2 <- sample(product_range, 1)
+      area_diff <- area - (p1 * p2)  # negative outcome is allowed
     }
 
-    # MIGHT NEED TO SPEED THIS UP
-    # size of the basis for generate controlled matrix
-    baseline_size <- sample(c(floor(sqrt(area)) - 1, floor(sqrt(area))), 1)
+    # create baseline
+    b <- generate_matrix(p1, p2, grid_size)
 
-    print(paste0("Changes: ", number_of_changes))
-    print(paste0("Area: ", area))
+    # if diff = 0, no sides to change, else determine how many sides to change
+      # eg area 16 and picked 4x4 square, then done
+    if (area_diff == 0) {
+      area_passed <- TRUE
+    }
 
-    test_matrix <- generate_controlled_matrix(
-      number_of_changes,
-      width = baseline_size,
-      height = baseline_size,
-      grid_size = grid_size,
-      sides = sides)
+    while (!area_passed) {
 
-    #compute_complexity(test_matrix)
+      # create vector of changes that will sum to the area diff (add/sub)
+      change_values <- sum_to_n(area_diff, 2, max_difference)
 
+      # test that b +/- changes will not exceed bounds 1 to max area
+      b_sum <- sum(b)
+      for (i in change_values) {
+        b_sum <- b_sum + i
+        if (b_sum <= 1 | b_sum > grid_size^2) {
+          print("changes exceeded the bounds, fix this bug")
+          print(change_values)
+        }
+      }
+
+      # rotate b random number of times
+      b <- randomize_orientation(b)
+
+      # make changes to b
+      for (i in 1:2) {
+        if (change_values[i] >= 0) {
+          b <- add_n_boxes(b, abs(change_values[i]))
+        } else {
+          b <- sub_n_boxes(b, abs(change_values[i]))
+        }
+      }
+
+      # test for area match
+      if (sum(b) == area) {
+        area_passed <- TRUE
+      } else {
+        # re-create baseline and start over
+        b <- generate_matrix(p1, p2, grid_size)
+      }
+    }
+
+    # compute indices and check for pass
+    test_matrix <- b
+    test_perimeter <- calculate_perimeter(test_matrix)
+    c <- compute_complexity(test_matrix)
+    test_complexity <- min(c$complexity)
+    test_corners <- count_sides(test_matrix)
+
+    if (random_perimeter == TRUE
+        | perimeter == test_perimeter) {
+      perimeter_passed <- TRUE
+      # print(paste0("Perimeter match: ", test_perimeter))
+    }
+
+    if (random_complexity == TRUE
+        | complexity == test_complexity) {
+      complexity_passed <- TRUE
+      # print(paste0("Complexity match: ", test_complexity))
+    }
+
+    if (random_corners == TRUE
+        | corners == test_corners) {
+      corners_passed <- TRUE
+      # print(paste0("Corners match: ", test_corners))
+    }
 
     if (!is_centered(test_matrix)) {
       saved_m <- test_matrix
       test_matrix <- recenter_matrix(test_matrix)
     }
+
+    if (area_passed
+        & perimeter_passed
+        & complexity_passed
+        & corners_passed
+    ) {
+      finished <- TRUE
+    }
+
+    # if not matched, re-run with iteration limits
+    iterations <- iterations - 1
+    print(paste0("Iterations: ", iterations))
+    # print(sum(test_matrix))
+  }
+
+
+  return(test_matrix)
+}
+
+
+
+
+# if number of sides to change unspecified, randomly determine how many
+# all_sides <- c("left", "right", "top", "bottom")
+# if (length(sides) == 0) {
+#   number_of_sides <- sample(1:4, 1)
+#   sides <- sample(all_sides, number_of_sides, replace = FALSE)
+# }
+
+# if no parameters specified, full random
+# not sure if I need this at all though
+# full_random <- FALSE
+# if (area == 0
+#     & perimeter == 0
+#     & complexity == 0
+#     & corners == 0) {
+#   full_random <- TRUE
+# }
+
+
+
+
+
+# else {
+#   # select random number of sides to change
+#   number_of_ops <- sample(1:2, 1)
+#   # re-sample if selected more sides than changes to make
+#   while (abs(area_diff) < number_of_sides) {
+#     number_of_sides <- sample(1:4, 1)
+#   }
+# }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # if change n boxes returned an error, start again
+    # if (b == 0) {
+    #   print("b was 0")
+    #   next
+    # }
+
+
+    ############################################
+    # MIGHT NEED TO SPEED THIS UP
+    # size of the basis for generate controlled matrix
+    #baseline_size <- sample(c(floor(sqrt(area)) - 1, floor(sqrt(area))), 1)
+
+    # print(paste0("Changes: ", number_of_changes))
+    # print(paste0("Area: ", area))
+
+    # test_matrix <- generate_controlled_matrix(
+    #   number_of_changes,
+    #   width = baseline_size,
+    #   height = baseline_size,
+    #   grid_size = grid_size,
+    #   sides = sides)
+
+
+
+    #compute_complexity(test_matrix)
+
+
+
 
     #plot_matrix(test_matrix)
 
@@ -131,54 +276,27 @@ generate_parameter_matrix <- function(area = 0, perimeter = 0,
     # print(paste0("Changes: ", number_of_changes))
     # print(paste0("Centered: ", is_centered(test_matrix)))
 
-    test_area <- sum(test_matrix)
-    test_perimeter <- calculate_perimeter(test_matrix)
+    #test_area <- sum(test_matrix)
 
-    c <- compute_complexity(test_matrix)
-    test_complexity <- min(c$complexity)
 
-    if (TRUE %in% c$fits) {
-      test_complexity_fits <- min(c$complexity[c$fits == TRUE])
-    } else {
-      test_complexity_fits <- -100
-    }
+    # if (TRUE %in% c$fits) {
+    #   test_complexity_fits <- min(c$complexity[c$fits == TRUE])
+    # } else {
+    #   test_complexity_fits <- -100
+    # }
 
 
     # 2 test values that need to be tested (or let them be random)
       # for testing purposes, print area, perimeter, complexity, sides
 
-    if (random_area == TRUE
-        | area == test_area) {
-      area_passed <- TRUE
-    }
+    # if (random_area == TRUE
+    #     | area == test_area) {
+    #   area_passed <- TRUE
+    #   print(paste0("Area matches: ", test_area))
+    # }
 
-    if (random_perimeter == TRUE
-        | perimeter == test_perimeter) {
-      perimeter_passed <- TRUE
-    }
 
-    if (random_complexity == TRUE
-        | complexity == test_complexity) {
-      complexity_passed <- TRUE
-    }
 
-    if (random_complexity_fits == TRUE
-        | complexity == test_complexity_fits) {
-      complexity_fits_passed <- TRUE
-    }
-
-    if (area_passed
-        & perimeter_passed
-        & complexity_passed
-        & complexity_fits_passed) {
-      finished <- TRUE
-    }
-
-    print(finished)
-    # 3 if not matched, re-run with iteration limits
-    iterations <- iterations - 1
-    print(paste0("Iterations: ", iterations))
-  }
 
 # to do:
   # 1 fix bugs
@@ -189,8 +307,6 @@ generate_parameter_matrix <- function(area = 0, perimeter = 0,
   # 2 test centered
   # 3 re-center (or return fail if unable to)
 
-  return(test_matrix)
-}
 
 
 

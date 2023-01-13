@@ -16,7 +16,7 @@
     # b) or more than 1 value toward inside (means they are on different side)
 
 
-check_sides <- function(matrix, check)
+check_sides <- function(matrix, check = "flat_count")
 {
   reduced <- trim_matrix(matrix)
   left <- c()

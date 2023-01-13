@@ -20,8 +20,11 @@
 
 # anything larger than 100x100 will take several minutes per image
 
-
-plot_matrix <- function(grid_matrix, gridline_size = 1.025, save_image = FALSE,
+# ADD
+  # arguments for drawing outline, fill
+  # 1 way to specify colours of outline and fill
+  # 2 way to make gridline only apply to the outline, if possible
+plot_matrix <- function(matrix, gridline_size = 1.025, save_image = FALSE,
                         name = "empty")
 {
 
@@ -30,10 +33,10 @@ plot_matrix <- function(grid_matrix, gridline_size = 1.025, save_image = FALSE,
   # DO: calculate gridline size as a proportion of the matrix size
 
 
-  grid_to_draw <- compute_plot_points(grid_matrix, gridline_size)
+  grid_to_draw <- compute_plot_points(matrix, gridline_size)
 
   # FUNCTION TO WRITE: based on the matrix, find edges and compute line points
-  # perimeter_to_draw <- compute_perimeter_lines(grid_matrix, gridline_size)
+  outline_to_draw <- compute_outline_points(matrix, grid_to_draw)
 
   # TESTING:
   # (x, y) is a point, (xend, yend) is other point, line connects them
@@ -49,15 +52,18 @@ plot_matrix <- function(grid_matrix, gridline_size = 1.025, save_image = FALSE,
 
   plot <- ggplot2::ggplot(grid_to_draw, aes(x = x, y = y)) +
     ggforce::geom_shape(aes(group = element),
-                        fill = grid_to_draw$draw_colour
+                        fill = grid_to_draw$cell_colour
                         #expand = unit(1, 'cm'), # would add a border
                         #radius = unit(0.5, 'cm')  # not sure what radius does
     ) +
-    # ggforce::geom_link0(data = lines, size = 2, aes(x = x, y = y,
-    #           xend = xend, yend = yend))# +
-    #geom_polygon(fill = 'black') +
-    #xlim(-4, 1) + ylim(-5, 0) +
-    ggplot2::theme_void() #+
+    ggforce::geom_link0(data = outline_to_draw,
+                        aes(group = edge,
+                            x = x, y = y,
+                            xend = xend, yend = yend),
+                        size = 1.1,
+                        colour = outline_to_draw$outline_colour) +
+    ggplot2::theme_void()
+
   print(plot)
 
   if (name == "empty") {
